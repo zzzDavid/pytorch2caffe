@@ -369,7 +369,7 @@ def _batch_norm(raw,input, running_mean, running_var, weight=None, bias=None,
     if weight is not None and bias is not None:
         layer_name2 = log.add_layer(name='bn_scale', torch_name=torch_name)
         layer2 = caffe_net.Layer_param(name=layer_name2, type='Scale',
-                                       bottom=top_blobs, top=[log.blobs(x)])
+                                       bottom=[log.blobs(x)], top=[log.blobs(x)])
         layer2.param.scale_param.bias_term = True
         layer2.add_data(weight.cpu().data.numpy(), bias.cpu().data.numpy())
         log.cnet.add_layer(layer2)
@@ -543,14 +543,22 @@ def _add(input, *args,torch_name=None):
     top_blobs = log.add_blobs([x], name='add_blob')
     if isinstance(args[0], (int, float)):
         # handle add constant bias
-        layer = caffe_net.Layer_param(name=layer_name, type='Bias', bottom=[log.blobs(input)], top=[log.blobs(x)])
-        layer.bias_param(args[0], trainable=False)
+        # layer = caffe_net.Layer_param(name=layer_name, type='Bias', bottom=[log.blobs(input)], top=[log.blobs(x)])
+        # layer.bias_param(args[0], trainable=False)
+        # DPU does not support Bias layer
+        layer = caffe_net.Layer_param(name=layer_name, type='Scale',
+                                      bottom=[log.blobs(input)], top=[log.blobs(x)])
+        layer.param.scale_param.bias_term = True
+        scale = torch.ones(x.size(), dtype=x.dtype)
+        bias = torch.ones(x.size(), dtype=x.dtype) * args[0]
+        layer.add_data(scale.numpy(), bias.numpy())
+        log.cnet.add_layer(layer)
     else:
         # elementwise add
         layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
                                       bottom=[log.blobs(input),log.blobs(args[0])], top=[log.blobs(x)])
         layer.param.eltwise_param.operation = 1 # sum is 1
-    log.cnet.add_layer(layer)
+        log.cnet.add_layer(layer)
     return x
 
 def _iadd(input, *args,torch_name=None):
@@ -582,7 +590,7 @@ def _sub(input, *args,torch_name=None):
     log.cnet.add_layer(layer)
     return x
 
-def _isub(input, *args):
+def _isub(input, *args, torch_name=None):
     x = raw__isub__(input, *args)
     if not NET_INITTED:
         return x
@@ -597,18 +605,20 @@ def _isub(input, *args):
 
 # TODO: support scalar operation using power layer (y = (shift + scale * x) ^ power, set shift = 0, power = 1)
 def _mul(input, *args,torch_name=None):
-    x = raw__mul__(input, *args)
+    x = raw__mul__(input, *args) # x is a torch Tensor
     if not NET_INITTED:
+        return x
+    if log.blobs(input) == 'None':
         return x
     # element wise mul using scale layer
     if isinstance(args[0], float):
         layer_name = log.add_layer(name='mul', torch_name=torch_name)
         top_blobs = log.add_blobs([x], name='mul_blob')
-        log.add_blobs([args[0]], name='scalar')
         layer = caffe_net.Layer_param(name=layer_name, type='Scale',
-                                      bottom=[log.blobs(input), log.blobs(args[0])], top=[log.blobs(x)])
+                                      bottom=[log.blobs(input)], top=[log.blobs(x)])
         layer.param.scale_param.bias_term = False
-        layer.param.scale_param.axis = 0
+        scale = torch.ones(x.size(), dtype=x.dtype)
+        layer.add_data(scale.numpy())
         log.cnet.add_layer(layer)
         return x
     assert args[0].shape[0] == input.shape[0] and args[0].shape[1] == input.shape[1]
@@ -626,6 +636,7 @@ def _mul(input, *args,torch_name=None):
                                       bottom=[log.blobs(input), log.blobs(y)], top=[log.blobs(x)])
         layer.param.scale_param.bias_term = False
         layer.param.scale_param.axis = 0
+        log.cnet.add_layer(layer)
     else:
         # acutally, dpu only support elementwise...
         layer_name = log.add_layer(name='mul', torch_name=torch_name)
@@ -633,7 +644,7 @@ def _mul(input, *args,torch_name=None):
         layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
                                       bottom=[log.blobs(input), log.blobs(args[0])], top=[log.blobs(x)])
         layer.param.eltwise_param.operation = 0  # product is 1
-    log.cnet.add_layer(layer)
+        log.cnet.add_layer(layer)
     return x
 
 def _imul(input, *args,torch_name=None):
