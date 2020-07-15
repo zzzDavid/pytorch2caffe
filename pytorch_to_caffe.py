@@ -13,6 +13,8 @@ from torch.nn.modules.utils import _pair
 
 from .Caffe import caffe_net, layer_param
 
+from aw_nas.utils import logger as _logger
+
 
 """
 How to support a new layer type:
@@ -53,7 +55,13 @@ class TransLog(object):
         self._blobs_data=[]
         self.cnet=caffe_net.Caffemodel('')
         self.debug=True
-        
+        self._logger = None
+
+    @property
+    def logger(self):
+        if self._logger is None:
+            self._logger = _logger.getChild(self.__class__.__name__)
+        return self._logger
 
     def init(self,inputs, _id):
         """
@@ -77,7 +85,7 @@ class TransLog(object):
 
     def add_blobs(self, blobs, name='blob',with_num=True):
         rst=[]
-        for blob in blobs:
+        for i, blob in enumerate(blobs):
             self._blobs_data.append(blob) # to block the memory address be rewrited
             blob_id=int(id(blob))
             if name not in self.detail_blobs.keys():
@@ -88,7 +96,7 @@ class TransLog(object):
             else:
                 rst.append('{}'.format(name))
             if self.debug:
-                print("{}:{} was added to blobs".format(blob_id,rst[-1]))
+                self.logger.info("{}:{} was added to blobs".format(blob_id,rst[-1]))
             self._blobs[blob_id]=rst[-1]
         return rst
         
@@ -549,8 +557,8 @@ def _add(input, *args,torch_name=None):
         layer = caffe_net.Layer_param(name=layer_name, type='Scale',
                                       bottom=[log.blobs(input)], top=[log.blobs(x)])
         layer.param.scale_param.bias_term = True
-        scale = torch.ones(x.size(), dtype=x.dtype)
-        bias = torch.ones(x.size(), dtype=x.dtype) * args[0]
+        scale = torch.ones(x.size()[1], dtype=x.dtype)
+        bias = torch.ones(x.size()[1], dtype=x.dtype) * args[0]
         layer.add_data(scale.numpy(), bias.numpy())
         log.cnet.add_layer(layer)
     else:
@@ -570,7 +578,7 @@ def _iadd(input, *args,torch_name=None):
         return x
     x=x.clone()
     layer_name = log.add_layer(name='iadd', torch_name=torch_name)
-    top_blobs = log.add_blobs([x], name='add_blob')
+    top_blobs = log.add_blobs([x], name='iadd_blob')
     layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
                                   bottom=[b1, b2], top=[log.blobs(x)])
     layer.param.eltwise_param.operation = 1 # sum is 1
@@ -617,7 +625,7 @@ def _mul(input, *args,torch_name=None):
         layer = caffe_net.Layer_param(name=layer_name, type='Scale',
                                       bottom=[log.blobs(input)], top=[log.blobs(x)])
         layer.param.scale_param.bias_term = False
-        scale = torch.ones(x.size(), dtype=x.dtype)
+        scale = torch.ones(x.size()[1], dtype=x.dtype)
         layer.add_data(scale.numpy())
         log.cnet.add_layer(layer)
         return x
@@ -798,9 +806,9 @@ for t in [torch.Tensor]:
 
 
 def trans_net(net,input_var,name='TransferedPytorchModel'):
-    print('Starting Transform, This will take a while')
     input_var = input_var.to(net.device)
-    log.init([input_var], name)
+    log.__init__() # clear layer list and blob list before translation
+    log.init([input_var], name) # init input layer
     log.cnet.net.name=name
     log.cnet.net.input.extend([log.blobs(input_var)])
     log.cnet.net.input_dim.extend(input_var.size())
