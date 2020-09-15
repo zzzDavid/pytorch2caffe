@@ -10,9 +10,6 @@ from torch.nn.modules.utils import _pair
 
 from .Caffe import caffe_net, layer_param
 
-# from aw_nas.utils import logger as _logger
-
-
 """
 How to support a new layer type:
     layer_name = log.add_layer(layer_type_name)
@@ -21,7 +18,7 @@ How to support a new layer type:
     <set layer parameters>
     [<layer.add_data(*datas)>]
     log.cnet.add_layer(layer)
-
+ 
 Please MUTE the inplace operations to avoid not find in graph
 """
 
@@ -57,13 +54,6 @@ class TransLog(object):
         self._blobs_data = []
         self.cnet = caffe_net.Caffemodel("")
         self.debug = True
-        # self._logger = None
-
-    # @property
-    # def logger(self):
-    #     if self._logger is None:
-    #         self._logger = _logger.getChild(self.__class__.__name__)
-    #     return self._logger
 
     def init(self, inputs, _id):
         """
@@ -1069,7 +1059,6 @@ for t in [torch.Tensor]:
 
 
 def trans_net(net, input_var, name="TransferedPytorchModel"):
-    input_var = input_var.to(net.device)
     log.__init__()  # clear layer list and blob list before translation
     log.init([input_var], name)  # init input layer
     log.cnet.net.name = name

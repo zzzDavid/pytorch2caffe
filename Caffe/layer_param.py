@@ -1,6 +1,8 @@
 from __future__ import absolute_import
-from . import caffe_pb2 as pb
+
 import numpy as np
+
+from . import caffe_pb2 as pb
 
 
 def pair_process(item, strict_one=True):
@@ -110,7 +112,7 @@ class Layer_param:
         pool_param.pool = pool_param.PoolMethod.Value(type)
         pool_param.kernel_size = pair_process(kernel_size)
         pool_param.stride = pair_process(stride)
-        pool_param.ceil_mode = ceil_mode
+        # pool_param.ceil_mode=ceil_mode
         if pad:
             if isinstance(pad, tuple):
                 pool_param.pad_h = pad[0]
@@ -125,7 +127,7 @@ class Layer_param:
         bn_param = pb.BatchNormParameter(
             # Not supported in this version's caffe
             # scale_filler=pb.FillerParameter(type="constant", value=1),
-            # bias_filler=pb.FillerParameter(type="constant", value=0)
+            # bias_filler=pb.FillerParameter(type="constant", value=0),
         )
         if use_global_stats is not None:
             bn_param.use_global_stats = use_global_stats
