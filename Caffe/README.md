@@ -1,8 +1,10 @@
 # The Caffe in PytorchToCaffe Provides some convenient API
 
-If there are some problem in parse your prototxt or caffemodel, Please replace
+If there are any problems in parsing your prototxt or caffemodel, Please replace
 the caffe.proto with your own version and compile it with command
-`protoc --python_out . caffe.proto`
+```bash
+$ protoc --python_out . caffe.proto
+```
 
 ## caffe_net.py
 
@@ -18,7 +20,7 @@ Using `from nn_tools.Caffe import caffe_net` to import this model
 - `net = caffe_net.Caffemodel(file_name)` to open a caffemodel
 - `net.save_prototxt(path)` to save the caffemodel to a prototxt file (not containing the weight data)
 - `net.get_layer_data(layer_name)` return the numpy ndarray data of the layer
-- `net.set_layer_date(layer_name, datas)` specify the data of one layer in the caffemodel .`datas` is normally a list of numpy ndarray `[weights, bias]`
+- `net.set_layer_data(layer_name, data)` specify the data of one layer in the caffemodel .`datas` is normally a list of numpy ndarray `[weights, bias]`
 - `net.save(path)` save the changed caffemodel
 
 ### Functions for both Prototxt and Caffemodel

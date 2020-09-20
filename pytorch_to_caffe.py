@@ -13,7 +13,8 @@ from torch.nn.modules.utils import _pair
 
 from .Caffe import caffe_net, layer_param
 
-from aw_nas.utils import logger as _logger
+import logging as logger
+logger.basicConfig(level=logging.DEBUG)
 
 
 """
@@ -817,7 +818,7 @@ def trans_net(net,input_var,name='TransferedPytorchModel'):
     for name,layer in net.named_modules():
         layer_names[layer]=name
     print("torch ops name:", layer_names)
-    out = net.forward(input_var)
+    net.forward(input_var)
     print('Transform Completed')
     NET_INITTED = False
 
