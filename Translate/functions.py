@@ -1,4 +1,3 @@
-from .Translog import TransLog
 from Caffe import caffe_net
 from torch.nn.modules.utils import _pair
 import torch
@@ -6,11 +5,7 @@ import torch.nn.functional as F
 from torch import Tensor as t
 import numpy as np
 
-# TODO: what does this do?
-translog = TransLog()
-NET_INITTED = False
-
-def _conv2d(raw, input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, torch_name=None):
+def _conv2d(translog, raw, input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, torch_name=None):
     x = raw(input, weight, bias, stride, padding, dilation, groups)
     name = translog.add_layer(name='conv', torch_name=torch_name)
     translog.add_blobs([x], name='conv_blob')
@@ -27,7 +22,7 @@ def _conv2d(raw, input, weight, bias=None, stride=1, padding=0, dilation=1, grou
     return x
 
 
-def _conv_transpose2d(raw, input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1,
+def _conv_transpose2d(translog, raw, input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1,
                       torch_name=None):
     x = raw(input, weight, bias, stride, padding, output_padding, groups, dilation)
     name = translog.add_layer(name='conv_transpose', torch_name=torch_name)
@@ -45,7 +40,7 @@ def _conv_transpose2d(raw, input, weight, bias=None, stride=1, padding=0, output
     return x
 
 
-def _linear(raw, input, weight, bias=None, torch_name=None):
+def _linear(translog, raw, input, weight, bias=None, torch_name=None):
     x = raw(input, weight, bias)
     layer_name = translog.add_layer(name='fc', torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='fc_blob')
@@ -60,7 +55,7 @@ def _linear(raw, input, weight, bias=None, torch_name=None):
     return x
 
 
-def _split(raw, tensor, split_size, dim=0, torch_name=None):
+def _split(translog, raw, tensor, split_size, dim=0, torch_name=None):
     # split in pytorch is slice in caffe
     x = raw(tensor, split_size, dim)
     layer_name = translog.add_layer('split', torch_name=torch_name)
@@ -81,7 +76,7 @@ def _split(raw, tensor, split_size, dim=0, torch_name=None):
     return x
 
 
-def _pool(type, raw, input, x, kernel_size, stride, padding, ceil_mode, torch_name=None):
+def _pool(translog, type, raw, input, x, kernel_size, stride, padding, ceil_mode, torch_name=None):
     # TODO dilation,ceil_mode,return indices
     layer_name = translog.add_layer(name='{}_pool'.format(type), torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='{}_pool_blob'.format(type))
@@ -105,21 +100,21 @@ def _pool(type, raw, input, x, kernel_size, stride, padding, ceil_mode, torch_na
                 layer_name, input.size(), x.size(), caffe_out.size()))
 
 
-def _max_pool2d(raw, input, kernel_size, stride=None, padding=0, dilation=1,
+def _max_pool2d(translog, raw, input, kernel_size, stride=None, padding=0, dilation=1,
                 ceil_mode=False, return_indices=False, torch_name=None):
     x = raw(input, kernel_size, stride, padding, dilation, ceil_mode, return_indices)
     _pool('max', raw, input, x, kernel_size, stride, padding, ceil_mode, torch_name=torch_name)
     return x
 
 
-def _avg_pool2d(raw, input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True,
+def _avg_pool2d(translog, raw, input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True,
                 divisor_override=None, torch_name=None):
     x = raw(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
     _pool('ave', raw, input, x, kernel_size, stride, padding, ceil_mode, torch_name=torch_name)
     return x
 
 
-def _max(raw, *args, torch_name=None):
+def _max(translog, raw, *args, torch_name=None):
     x = raw(*args)
     if len(args) == 1:
         # TODO max in one tensor
@@ -137,7 +132,7 @@ def _max(raw, *args, torch_name=None):
     return x
 
 
-def _cat(raw, inputs, dimension=0, torch_name=None):
+def _cat(translog, raw, inputs, dimension=0, torch_name=None):
     x = raw(inputs, dimension)
     bottom_blobs = []
     for input in inputs:
@@ -151,7 +146,7 @@ def _cat(raw, inputs, dimension=0, torch_name=None):
     return x
 
 
-def _dropout(raw, input, p=0.5, training=False, inplace=False, torch_name=None):
+def _dropout(translog, raw, input, p=0.5, training=False, inplace=False, torch_name=None):
     bottom_blobs = [translog.blobs(input)]
     x = raw(input, p, training, False)
     layer_name = translog.add_layer(name='dropout', torch_name=torch_name)
@@ -164,7 +159,7 @@ def _dropout(raw, input, p=0.5, training=False, inplace=False, torch_name=None):
     return x
 
 
-def _threshold(raw, input, threshold, value, inplace=False, torch_name=None):
+def _threshold(translog, raw, input, threshold, value, inplace=False, torch_name=None):
     # for threshold or relu
     if threshold == 0 and value == 0:
         x = raw(input, threshold, value, inplace)
@@ -188,7 +183,7 @@ def _threshold(raw, input, threshold, value, inplace=False, torch_name=None):
     return x
 
 
-def _relu(raw, input, inplace=False, torch_name=None):
+def _relu(translog, raw, input, inplace=False, torch_name=None):
     # for threshold or prelu
     x = raw(input, False)
     name = translog.add_layer(name='relu', torch_name=torch_name)
@@ -199,7 +194,7 @@ def _relu(raw, input, inplace=False, torch_name=None):
     return x
 
 
-def _relu6(raw, input, inplace=False, torch_name=None):
+def _relu6(translog, raw, input, inplace=False, torch_name=None):
     # FIXME: as dpu do not suppport relu6, try use relu
     x = raw(input, False)
     name = translog.add_layer(name='relu', torch_name=torch_name)
@@ -210,7 +205,7 @@ def _relu6(raw, input, inplace=False, torch_name=None):
     return x
 
 
-def _prelu(raw, input, weight, torch_name=None):
+def _prelu(translog, raw, input, weight, torch_name=None):
     # for threshold or prelu
     x = raw(input, weight)
     bottom_blobs = [translog.blobs(input)]
@@ -227,7 +222,7 @@ def _prelu(raw, input, weight, torch_name=None):
     return x
 
 
-def _leaky_relu(raw, input, negative_slope=0.01, inplace=False, torch_name=None):
+def _leaky_relu(translog, raw, input, negative_slope=0.01, inplace=False, torch_name=None):
     x = raw(input, negative_slope)
     name = translog.add_layer(name='leaky_relu', torch_name=torch_name)
     translog.add_blobs([x], name='leaky_relu_blob')
@@ -238,7 +233,7 @@ def _leaky_relu(raw, input, negative_slope=0.01, inplace=False, torch_name=None)
     return x
 
 
-def _tanh(raw, input, torch_name=None):
+def _tanh(translog, raw, input, torch_name=None):
     # for tanh activation
     x = raw(input)
     name = translog.add_layer(name='tanh', torch_name=torch_name)
@@ -249,7 +244,7 @@ def _tanh(raw, input, torch_name=None):
     return x
 
 
-def _softmax(raw, input, dim=None, _stacklevel=3, torch_name=None):
+def _softmax(translog, raw, input, dim=None, _stacklevel=3, torch_name=None):
     # for F.softmax
     x = raw(input, dim=dim)
     if dim is None:
@@ -264,7 +259,7 @@ def _softmax(raw, input, dim=None, _stacklevel=3, torch_name=None):
     return x
 
 
-def _batch_norm(raw, input, running_mean, running_var, weight=None, bias=None,
+def _batch_norm(translog, raw, input, running_mean, running_var, weight=None, bias=None,
                 training=False, momentum=0.1, eps=1e-5, torch_name=None):
     # because the runing_mean and runing_var will be changed after the _batch_norm operation, we first save the parameters
 
@@ -300,7 +295,7 @@ def _batch_norm(raw, input, running_mean, running_var, weight=None, bias=None,
     return x
 
 
-def _instance_norm(raw, input, running_mean=None, running_var=None, weight=None,
+def _instance_norm(translog, raw, input, running_mean=None, running_var=None, weight=None,
                    bias=None, use_input_stats=True, momentum=0.1, eps=1e-5, torch_name=None):
     # TODO: the batch size!=1 view operations
     print("WARNING: The Instance Normalization transfers to Caffe using BatchNorm, so the batch size should be 1")
@@ -337,7 +332,7 @@ def _instance_norm(raw, input, running_mean=None, running_var=None, weight=None,
 
 
 # upsample layer
-def _interpolate(raw, input, size=None, scale_factor=None, mode='nearest', align_corners=None, torch_name=None):
+def _interpolate(translog, raw, input, size=None, scale_factor=None, mode='nearest', align_corners=None, torch_name=None):
     # 定义的参数包括 scale,即输出与输入的尺寸比例,如 2;scale_h、scale_w,
     # 同 scale,分别为 h、w 方向上的尺寸比例;pad_out_h、pad_out_w,仅在 scale 为 2 时
     # 有用,对输出进行额外 padding 在 h、w 方向上的数值;upsample_h、upsample_w,输
@@ -359,7 +354,7 @@ def _interpolate(raw, input, size=None, scale_factor=None, mode='nearest', align
 
 
 # sigmid layer
-def _sigmoid(raw, input, torch_name=None):
+def _sigmoid(translog, raw, input, torch_name=None):
     # Applies the element-wise function:
     #
     # Sigmoid(x)= 1/(1+exp(−x)）
@@ -375,7 +370,7 @@ def _sigmoid(raw, input, torch_name=None):
 
 
 # tanh layer
-def _tanh(raw, input, torch_name=None):
+def _tanh(translog, raw, input, torch_name=None):
     # Applies the element-wise function:
     #
     # torch.nn.Tanh
@@ -390,10 +385,8 @@ def _tanh(raw, input, torch_name=None):
     return x
 
 
-def _squeeze(raw, inputs, *args, torch_name=None):
+def _squeeze(translog, raw, inputs, *args, torch_name=None):
     x = raw(inputs, *args)
-    if not NET_INITTED:
-        return x
     layer_name = translog.add_layer(name='squeeze', torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='view_blob')
     layer = caffe_net.Layer_param(name=layer_name, type='Reshape',
@@ -405,15 +398,13 @@ def _squeeze(raw, inputs, *args, torch_name=None):
     return x
 
 
-def _flatten(raw, inputs, *args, torch_name=None):
+def _flatten(translog, raw, inputs, *args, torch_name=None):
     dims = inputs.shape
     x = raw(inputs, *args)
     if len(args) == 0:
         start = 0
     else:
         start = args[0]
-    if not NET_INITTED:
-        return x
     layer_name = translog.add_layer(name='flatten', torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='view_blob')
     layer = caffe_net.Layer_param(name=layer_name, type='Reshape',
@@ -427,10 +418,8 @@ def _flatten(raw, inputs, *args, torch_name=None):
 
 # ----- for Variable operations --------
 
-def _view(input, *args, torch_name=None):
+def _view(translog, input, *args, torch_name=None):
     x = t.view(input, *args)
-    if not NET_INITTED:
-        return x
     layer_name = translog.add_layer(name='view', torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='view_blob')
     layer = caffe_net.Layer_param(name=layer_name, type='Reshape',
@@ -443,10 +432,8 @@ def _view(input, *args, torch_name=None):
     return x
 
 
-def _mean(input, *args, torch_name=None, **kwargs):
+def _mean(translog, input, *args, torch_name=None, **kwargs):
     x = t.mean(input, *args, **kwargs)
-    if not NET_INITTED:
-        return x
     layer_name = translog.add_layer(name='mean', torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='mean_blob')
     layer = caffe_net.Layer_param(name=layer_name, type='Reduction',
@@ -463,10 +450,8 @@ def _mean(input, *args, torch_name=None, **kwargs):
     return x
 
 
-def _add(input, *args, torch_name=None):
+def _add(translog, input, *args, torch_name=None):
     x = t.__add__(input, *args)
-    if not NET_INITTED:
-        return x
     layer_name = translog.add_layer(name='add', torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='add_blob')
     if isinstance(args[0], (int, float)):
@@ -490,13 +475,11 @@ def _add(input, *args, torch_name=None):
     return x
 
 
-def _iadd(input, *args, torch_name=None):
+def _iadd(translog, input, *args, torch_name=None):
     b1, b2 = translog.blobs(input), translog.blobs(args[0])
     if b1 == 'None' and b2 == 'None':
         return input
     x = t.__iadd__(input, *args)
-    if not NET_INITTED:
-        return x
     x = x.clone()
     layer_name = translog.add_layer(name='iadd', torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='iadd_blob')
@@ -507,10 +490,8 @@ def _iadd(input, *args, torch_name=None):
     return x
 
 
-def _sub(input, *args, torch_name=None):
+def _sub(translog, input, *args, torch_name=None):
     x = t.__sub__(input, *args)
-    if not NET_INITTED:
-        return x
     layer_name = translog.add_layer(name='sub', torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='sub_blob')
     layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
@@ -521,10 +502,8 @@ def _sub(input, *args, torch_name=None):
     return x
 
 
-def _isub(input, *args, torch_name=None):
+def _isub(translog, input, *args, torch_name=None):
     x = t.__isub__(input, *args)
-    if not NET_INITTED:
-        return x
     x = x.clone()
     layer_name = translog.add_layer(name='isub', torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='sub_blob')
@@ -536,10 +515,8 @@ def _isub(input, *args, torch_name=None):
 
 
 # TODO: support scalar operation using power layer (y = (shift + scale * x) ^ power, set shift = 0, power = 1)
-def _mul(input, *args, torch_name=None):
+def _mul(translog, input, *args, torch_name=None):
     x = t.__mul__(input, *args)  # x is a torch Tensor
-    if not NET_INITTED:
-        return x
     if translog.blobs(input) == 'None':
         return x
     # element wise mul using scale layer
@@ -582,10 +559,8 @@ def _mul(input, *args, torch_name=None):
     return x
 
 
-def _imul(input, *args, torch_name=None):
+def _imul(translog, input, *args, torch_name=None):
     x = t.__imul__(input, *args)
-    if not NET_INITTED:
-        return x
     x = x.clone()
     layer_name = translog.add_layer(name='mul', torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='mul_blob')
@@ -598,10 +573,8 @@ def _imul(input, *args, torch_name=None):
 
 
 # TODO: support division: determine which method is called, now we know that torch.Tensor.__div__ and torch.Tensor.__idiv__ are not called.
-def _div(input, *args, torch_name=None):
+def _div(translog, input, *args, torch_name=None):
     x = t.__div__(input, *args)
-    if not NET_INITTED:
-        return x
     # element wise mul using scale layer
     if isinstance(args[0], float):
         layer_name = translog.add_layer(name='div', torch_name=torch_name)
@@ -641,10 +614,8 @@ def _div(input, *args, torch_name=None):
     return x
 
 
-def _idiv(input, *args, torch_name=None):
+def _idiv(translog, input, *args, torch_name=None):
     x = t.__idiv__(input, *args)
-    if not NET_INITTED:
-        return x
     x = x.clone()
     layer_name = translog.add_layer(name='div', torch_name=torch_name)
     top_blobs = translog.add_blobs([x], name='div_blob')
