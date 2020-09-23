@@ -13,10 +13,11 @@ save_caffemodel()
 
 ## Done
 
--[*] Added None blob checking
--[*] Fixed input layer issues: Vitis requires input blob is named `data`, and it must be a input layer, not input field.
+- [x]  Added None blob checking
+
+- [x] Fixed input layer issues: Vitis requires input blob is named `data`, and it must be a input layer, not input field.
 
 
 ## TODO
 
--[*] Tensor operation is not supported yet. Is there any method to reload the operator and add more arguments in its argument list? 
+- [ ] Tensor operation is not supported yet. Is there any method to reload the operator and add more arguments in its argument list? 
