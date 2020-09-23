@@ -1,4 +1,6 @@
 from Caffe import caffe_net
+import torch
+from collections import OrderedDict
 
 ## setup logger
 import logging
@@ -17,7 +19,7 @@ class TransLog(object):
 
     def __init__(self):
         self.layers = dict()
-        self.blobs = dict()
+        self.blobs = OrderedDict()
         self.layer_count = dict()
         self.blob_count = dict()
         self._blobs_data =[]
@@ -31,20 +33,35 @@ class TransLog(object):
         self.cnet.net.name = name
         self.name = name    
 
-    def set_input(self, input_var):
+    def set_input(self, input_var, source='', root_folder='', batch_size=1, new_height=224, new_width=224):
         """
         input_var: torch.Tensor object
         """
         top_blobs = self.add_blobs([input_var], name='data', with_num=False)
+        label_blob = self.add_blobs([torch.ones(1)], name='label', with_num=False) # just a placeholder
+        top_blobs += label_blob
         layer_name = self.add_layer(name='input')
         logger.info(f'---> layer name: {layer_name}, top blobs: {top_blobs}') 
-        layer_param = caffe_net.Layer_param(name=layer_name, type='Input',
+        layer_param = caffe_net.Layer_param(name=layer_name, type='ImageData',
                                             top=top_blobs)
         # import ipdb; ipdb.set_trace()
         dims = list()
         dims.extend([1, 3, 224, 224])
-        layer_param.input_param(dims)
+        layer_param.input_param(source, root_folder, batch_size, new_height, new_width)
         self.cnet.add_layer(layer_param)
+
+    def set_softmaxwithloss(self, input_var):
+        # import ipdb; ipdb.set_trace()
+        assert 'label' in self.blobs.values(), "Ya'll need the label blob in the input layer to construct a loss layer"
+        layer_name = self.add_layer(name='loss')
+        top_blobs = self.add_blobs([torch.ones(1)], name='loss', with_num=False)
+        bottom_blob = self.blobs[id(input_var)]
+        bottom_blobs = ['label', bottom_blob]
+        logger.info(f'---> layer name: {layer_name}, bottom_blobs: {bottom_blobs}, top blobs: {top_blobs}') 
+        layer_param = caffe_net.Layer_param(name=layer_name, type='SoftmaxWithLoss', 
+                                            bottom=bottom_blobs, top=top_blobs)
+        self.cnet.add_layer(layer_param)
+
 
     def add_layer(self, name='layer', torch_name=None):
         if name in self.layers:

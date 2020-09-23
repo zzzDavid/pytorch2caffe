@@ -22,7 +22,7 @@ def pair_reduce(item):
     return [item]
 
 class Layer_param():
-    def __init__(self,name='',type='',top=(),bottom=()):
+    def __init__(self, name='', type='', top=(), bottom=()):
         self.param=pb.LayerParameter()
         self.name=self.param.name=name
         self.type=self.param.type=type
@@ -32,17 +32,18 @@ class Layer_param():
         self.bottom=self.param.bottom
         self.bottom.extend(bottom)
 
-    def input_param(self, dims):
-        """
-        shape should be a tuple
-        """    
-        # import ipdb; ipdb.set_trace()
-        i_param = pb.InputParameter(shape=[pb.BlobShape(dim=dims)])
-        # pb.InputParameter.shape = pb.BlobShape(dim=dims)
-        # dims = [dims[i] for i in range(start)] + [-1]
-        #layer.param.reshape_param.shape.CopyFrom(caffe_net.pb.BlobShape(dim=dims))
-        #layer.param.reshape_param.shape.CopyFrom(caffe_net.pb.BlobShape(dim=dims))
-        self.param.input_param.CopyFrom(i_param)
+    # def input_param(self, dims):
+    #     i_param = pb.InputParameter(shape=[pb.BlobShape(dim=dims)])
+    #     self.param.input_param.CopyFrom(i_param)
+
+    def input_param(self, source, root_folder, batch_size, new_height, new_width):
+        image_data_param = pb.ImageDataParameter()
+        image_data_param.source = source
+        image_data_param.root_folder = root_folder
+        image_data_param.batch_size = batch_size
+        image_data_param.new_height = new_height
+        image_data_param.new_width = new_width
+        self.param.image_data_param.CopyFrom(image_data_param)
 
 
     def bias_param(self, bias, trainable=False):

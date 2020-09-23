@@ -1,3 +1,5 @@
+test/*.caffemodel
+test/*.prototxt
 .vscode
 .pkl_memoize_py3
 .idea

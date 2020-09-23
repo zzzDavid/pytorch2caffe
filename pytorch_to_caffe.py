@@ -114,12 +114,14 @@ class pytorch2caffe(object):
     def trans_net(self, input_var, name='TransferedPytorchModel'):
         self.translog.set_net_name(name)
         self.translog.set_input(input_var)
+        x = self.model.forward(input_var)
+        self.translog.set_softmaxwithloss(x)
 
-        # import ipdb; ipdb.set_trace()
-        self.model.forward(input_var)
 
     def save_prototxt(self, save_name):
+        logger.info("saving prototxt to: " + save_name + " ...")
         self.translog.cnet.save_prototxt(save_name)
 
     def save_caffemodel(self, save_name):
+        logger.info("saving caffemodel to: " + save_name + " ...")
         self.translog.cnet.save(save_name)
