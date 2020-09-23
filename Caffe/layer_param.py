@@ -32,6 +32,19 @@ class Layer_param():
         self.bottom=self.param.bottom
         self.bottom.extend(bottom)
 
+    def input_param(self, dims):
+        """
+        shape should be a tuple
+        """    
+        # import ipdb; ipdb.set_trace()
+        i_param = pb.InputParameter(shape=[pb.BlobShape(dim=dims)])
+        # pb.InputParameter.shape = pb.BlobShape(dim=dims)
+        # dims = [dims[i] for i in range(start)] + [-1]
+        #layer.param.reshape_param.shape.CopyFrom(caffe_net.pb.BlobShape(dim=dims))
+        #layer.param.reshape_param.shape.CopyFrom(caffe_net.pb.BlobShape(dim=dims))
+        self.param.input_param.CopyFrom(i_param)
+
+
     def bias_param(self, bias, trainable=False):
         if self.type != "Bias":
             raise TypeError()
@@ -81,12 +94,12 @@ class Layer_param():
             conv_param.group=groups
         self.param.convolution_param.CopyFrom(conv_param)
 
-    def pool_param(self,type='MAX',kernel_size=2,stride=2,pad=None, ceil_mode = True):
+    def pool_param(self,type='MAX',kernel_size=2,stride=2,pad=None):
         pool_param=pb.PoolingParameter()
         pool_param.pool=pool_param.PoolMethod.Value(type)
         pool_param.kernel_size=pair_process(kernel_size)
         pool_param.stride=pair_process(stride)
-        pool_param.ceil_mode=ceil_mode
+        # pool_param.ceil_mode=ceil_mode
         if pad:
             if isinstance(pad,tuple):
                 pool_param.pad_h = pad[0]

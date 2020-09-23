@@ -11,7 +11,12 @@ save_prototxt()
 save_caffemodel()
 ```
 
-由于此项目的代码太过菠萝菠萝哒，现在正在重写。需要解决的问题：
-1. None blob, unknown blob check
-2. Input layer/Loss layer
-暂时想到这些
+## Done
+
+-[*] Added None blob checking
+-[*] Fixed input layer issues: Vitis requires input blob is named `data`, and it must be a input layer, not input field.
+
+
+## TODO
+
+-[*] Tensor operation is not supported yet. Is there any method to reload the operator and add more arguments in its argument list? 
