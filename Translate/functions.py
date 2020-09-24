@@ -1,3 +1,4 @@
+import traceback
 from Caffe import caffe_net
 from torch.nn.modules.utils import _pair
 import torch
@@ -487,38 +488,31 @@ def _add(translog, raw, input, *args, torch_name=None):
         translog.cnet.add_layer(layer)
     return x
 
-
-def _iadd(translog, raw, *args, torch_name=None):
-    import ipdb; ipdb.set_trace()
-    if id(input) not in translog.blobs.keys() and id(args[0]) not in translog.blobs.keys():
-        return input
-    b1, b2 = translog.blobs[id(input)], translog.blobs[id(args[0])]
-    x = t.__iadd__(input, *args)
-    x = x.clone()
-    layer_name = translog.add_layer(name='iadd', torch_name=torch_name)
-    top_blobs = translog.add_blobs([x], name='iadd_blob')
-    layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
-                                  bottom=[b1, b2], top=[translog.blobs[id(x)]])
-    layer.param.eltwise_param.operation = 1  # sum is 1
-    translog.cnet.add_layer(layer)
-    return x
-
-def _iadd2(*args, **kwargs):
-    import ipdb; ipdb.set_trace()
-    b1, b2 = log.blobs(input),log.blobs(args[0])
-    if b1 == 'None' and b2 == 'None':
-        return input
-    x = raw__iadd__(input, *args)
-    if not NET_INITTED:
+def _iadd(raw, translog, torch_name=None):
+    
+    for stack in traceback.walk_stack(None):
+        if 'self' in stack[0].f_locals:
+            layer = stack[0].f_locals['self']
+            import ipdb; ipdb.set_trace()
+    
+    def __patched_iadd__(input, other):
+        if id(input) not in translog.blobs.keys() and id(other) not in translog.blobs.keys():
+            return input
+        b1, b2 = translog.blobs[id(input)], translog.blobs[id(other)]
+        x = raw(input, other)
+        x = x.clone()
+        layer_name = translog.add_layer(name='eltwise', torch_name=torch_name)
+        top_blobs = translog.add_blobs([x], name='iadd_blob')
+        logger.info(f'---> layer name: {layer_name}, bottom blobs: {[b1, b2]}, top blobs: {top_blobs}') 
+        layer_param = caffe_net.Layer_param(name=layer_name, type='Eltwise',
+                                            bottom=[b1, b2], top=top_blobs)
+        layer_param.param.eltwise_param.operation = 1 # eltwise sum
+        translog.cnet.add_layer(layer_param)
         return x
-    x=x.clone()
-    layer_name = log.add_layer(name='iadd', torch_name=torch_name)
-    top_blobs = log.add_blobs([x], name='iadd_blob')
-    layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
-                                  bottom=[b1, b2], top=[log.blobs(x)])
-    layer.param.eltwise_param.operation = 1 # sum is 1
-    log.cnet.add_layer(layer)
-    return x
+
+    return __patched_iadd__    
+        
+
 
 
 

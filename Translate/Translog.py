@@ -91,13 +91,3 @@ class TransLog(object):
             # self._logger.info(f'blob: {rst[-1]} was added to the list')
             self.blobs[blob_id] = rst[-1]
         return rst
-
-    def blobs(self, var):
-        _var = id(var)
-        try:
-            if self.debug:
-                print("{}:{} getting".format(_var, self.blobs[_var]))
-            return self.blobs[_var]
-        except:
-            self._logger.exception("CANNOT FIND blob {}".format(_var))
-            return 'None'

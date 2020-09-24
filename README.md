@@ -22,7 +22,15 @@ save_caffemodel()
 ## TODO
 
 
-
 - [ ] Tensor operation is not supported yet. Is there any method to reload the operator and add more arguments in its argument list? 
 
 - [ ] Global average pooling support: `torch.nn.AdaptiveAvgPooling2d(1,1)`
+
+
+## Note
+
+1. Issues with name correspondence
+
+We have a `dict()` in class `Translog` to record the torch function names and their corresponding caffe layer names. But we don't have that information for tensor operations. 
+
+For example, `+=` can convert into `Eltwise` in Caffe, but it does not have torch name since it is not a function.
