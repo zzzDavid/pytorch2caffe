@@ -21,13 +21,14 @@ class test_model(nn.Module):
         return x
 
 if __name__ == "__main__":
-    model = resnet18(pretrained=False)
+    model = resnet50(pretrained=False)
     # model = test_model()
     input = Variable(torch.ones([1, 3, 416, 416]))
     out_proto = 'resnet50.prototxt'
     out_caffemodel = 'resnet50.caffemodel'
 
     torch2caffe = pytorch2caffe(model)
-    torch2caffe.trans_net(input, "resnet50")
+    torch2caffe.set_input(input)
+    torch2caffe.trans_net("resnet50")
     torch2caffe.save_caffemodel(out_caffemodel)
     torch2caffe.save_prototxt(out_proto)

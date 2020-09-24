@@ -67,8 +67,8 @@ def replace_functions(translog, torch_layer_dict):
     torch.cat            = Rp(torch.cat,_cat, translog, torch_layer_dict)
 
     # Replace Tensor operations
-    t.__view__ = _view(t.__view__, translog)
-    t.__mean__ = _mean(t.__mean__, translog)
+    t.view = _view(t.view, translog)
+    t.mean = _mean(t.mean, translog)
     t.__add__  = _add(t.__add__, translog)
     t.__iadd__ = _iadd(t.__iadd__, translog)
     t.__sub__  = _sub(t.__sub__, translog)
