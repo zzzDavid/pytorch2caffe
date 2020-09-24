@@ -19,10 +19,12 @@ save_caffemodel()
 
 - [x] Add input data source and loss layer
 
+- [x] Tensor operations are supported
+
 ## TODO
 
 
-- [ ] Tensor operation is not supported yet. Is there any method to reload the operator and add more arguments in its argument list? 
+- [ ] Supported layer checking
 
 - [ ] Global average pooling support: `torch.nn.AdaptiveAvgPooling2d(1,1)`
 

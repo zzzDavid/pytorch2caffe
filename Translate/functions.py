@@ -432,68 +432,76 @@ def _flatten(translog, raw, inputs, *args, torch_name=None):
 
 # ----- for Variable operations --------
 
-def _view(translog, raw, input, *args, torch_name=None):
-    x = t.view(input, *args)
-    layer_name = translog.add_layer(name='view', torch_name=torch_name)
-    top_blobs = translog.add_blobs([x], name='view_blob')
-    layer = caffe_net.Layer_param(name=layer_name, type='Reshape',
-                                  bottom=[translog.blobs[id(input)]], top=[translog.blobs[id(x)]])
-    # TODO: reshpae added to nn_tools layer
-    dims = list(args)
-    dims[0] = 0  # the first dim should be batch_size
-    layer.param.reshape_param.shape.CopyFrom(caffe_net.pb.BlobShape(dim=dims))
-    translog.cnet.add_layer(layer)
-    return x
+def _view(raw, translog):
 
-
-def _mean(translog, raw, input, *args, torch_name=None, **kwargs):
-    x = t.mean(input, *args, **kwargs)
-    layer_name = translog.add_layer(name='mean', torch_name=torch_name)
-    top_blobs = translog.add_blobs([x], name='mean_blob')
-    layer = caffe_net.Layer_param(name=layer_name, type='Reduction',
-                                  bottom=[translog.blobs[id(input)]], top=[translog.blobs[id(x)]])
-    if len(args) == 1:
-        dim = args[0]
-    elif 'dim' in kwargs:
-        dim = kwargs['dim']
-    else:
-        raise NotImplementedError('mean operation must specify a dim')
-    layer.param.reduction_param.operation = 4
-    layer.param.reduction_param.axis = dim
-    translog.cnet.add_layer(layer)
-    return x
-
-
-def _add(translog, raw, input, *args, torch_name=None):
-    x = t.__add__(input, *args)
-    layer_name = translog.add_layer(name='add', torch_name=torch_name)
-    top_blobs = translog.add_blobs([x], name='add_blob')
-    if isinstance(args[0], (int, float)):
-        # handle add constant bias
-        # layer = caffe_net.Layer_param(name=layer_name, type='Bias', bottom=[log.blobs(input)], top=[log.blobs(x)])
-        # layer.bias_param(args[0], trainable=False)
-        # DPU does not support Bias layer
-        layer = caffe_net.Layer_param(name=layer_name, type='Scale',
-                                      bottom=[translog.blobs[id(input)]], top=[translog.blobs[id(x)]])
-        layer.param.scale_param.bias_term = True
-        scale = torch.ones(x.size()[1], dtype=x.dtype)
-        bias = torch.ones(x.size()[1], dtype=x.dtype) * args[0]
-        layer.add_data(scale.numpy(), bias.numpy())
+    def __patched_view__(input, *args):
+        x = raw(input, *args)
+        layer_name = translog.add_layer(name='view')
+        top_blobs = translog.add_blobs([x], name='view_blob')
+        layer = caffe_net.Layer_param(name=layer_name, type='Reshape',
+                                    bottom=[translog.blobs[id(input)]], top=[translog.blobs[id(x)]])
+        # TODO: reshpae added to nn_tools layer
+        dims = list(args)
+        dims[0] = 0  # the first dim should be batch_size
+        layer.param.reshape_param.shape.CopyFrom(caffe_net.pb.BlobShape(dim=dims))
         translog.cnet.add_layer(layer)
-    else:
-        # elementwise add
-        layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
-                                      bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
-        layer.param.eltwise_param.operation = 1  # sum is 1
-        translog.cnet.add_layer(layer)
-    return x
+        return x
 
-def _iadd(raw, translog, torch_name=None):
-    
-    for stack in traceback.walk_stack(None):
-        if 'self' in stack[0].f_locals:
-            layer = stack[0].f_locals['self']
-            import ipdb; ipdb.set_trace()
+    return __patched_view__    
+
+
+def _mean(raw, translog):
+
+    def __patched_mean__(input, *args, **kwargs):
+        x = raw(input, *args, **kwargs)
+        layer_name = translog.add_layer(name='mean')
+        top_blobs = translog.add_blobs([x], name='mean_blob')
+        layer = caffe_net.Layer_param(name=layer_name, type='Reduction',
+                                    bottom=[translog.blobs[id(input)]], top=[translog.blobs[id(x)]])
+        if len(args) == 1:
+            dim = args[0]
+        elif 'dim' in kwargs:
+            dim = kwargs['dim']
+        else:
+            raise NotImplementedError('mean operation must specify a dim')
+        layer.param.reduction_param.operation = 4
+        layer.param.reduction_param.axis = dim
+        translog.cnet.add_layer(layer)
+        return x
+
+    return __patched_mean__    
+
+
+def _add(raw, translog):
+
+    def __patched_add__(input, *args):
+        x = raw(input, *args)
+        layer_name = translog.add_layer(name='add', torch_name=torch_name)
+        top_blobs = translog.add_blobs([x], name='add_blob')
+        if isinstance(args[0], (int, float)):
+            # handle add constant bias
+            # layer = caffe_net.Layer_param(name=layer_name, type='Bias', bottom=[log.blobs(input)], top=[log.blobs(x)])
+            # layer.bias_param(args[0], trainable=False)
+            # DPU does not support Bias layer
+            layer = caffe_net.Layer_param(name=layer_name, type='Scale',
+                                        bottom=[translog.blobs[id(input)]], top=[translog.blobs[id(x)]])
+            layer.param.scale_param.bias_term = True
+            scale = torch.ones(x.size()[1], dtype=x.dtype)
+            bias = torch.ones(x.size()[1], dtype=x.dtype) * args[0]
+            layer.add_data(scale.numpy(), bias.numpy())
+            translog.cnet.add_layer(layer)
+        else:
+            # elementwise add
+            layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
+                                        bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
+            layer.param.eltwise_param.operation = 1  # sum is 1
+            translog.cnet.add_layer(layer)
+        return x
+
+    return __patched_add__    
+
+
+def _iadd(raw, translog):
     
     def __patched_iadd__(input, other):
         if id(input) not in translog.blobs.keys() and id(other) not in translog.blobs.keys():
@@ -501,7 +509,7 @@ def _iadd(raw, translog, torch_name=None):
         b1, b2 = translog.blobs[id(input)], translog.blobs[id(other)]
         x = raw(input, other)
         x = x.clone()
-        layer_name = translog.add_layer(name='eltwise', torch_name=torch_name)
+        layer_name = translog.add_layer(name='eltwise')
         top_blobs = translog.add_blobs([x], name='iadd_blob')
         logger.info(f'---> layer name: {layer_name}, bottom blobs: {[b1, b2]}, top blobs: {top_blobs}') 
         layer_param = caffe_net.Layer_param(name=layer_name, type='Eltwise',
@@ -513,144 +521,160 @@ def _iadd(raw, translog, torch_name=None):
     return __patched_iadd__    
         
 
+def _sub(raw, translog):
 
+    def __patched_sub__(input, *args):
+        x = raw(input, *args)
+        layer_name = translog.add_layer(name='sub', torch_name=torch_name)
+        top_blobs = translog.add_blobs([x], name='sub_blob')
+        layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
+                                    bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
+        layer.param.eltwise_param.operation = 1  # sum is 1
+        layer.param.eltwise_param.coeff.extend([1., -1.])
+        translog.cnet.add_layer(layer)
+        return x
 
+    return __patched_sub__    
 
-def _sub(translog, raw, input, *args, torch_name=None):
-    x = t.__sub__(input, *args)
-    layer_name = translog.add_layer(name='sub', torch_name=torch_name)
-    top_blobs = translog.add_blobs([x], name='sub_blob')
-    layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
-                                  bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
-    layer.param.eltwise_param.operation = 1  # sum is 1
-    layer.param.eltwise_param.coeff.extend([1., -1.])
-    translog.cnet.add_layer(layer)
-    return x
+def _isub(raw, translog):
 
+    def __patched_isub(input, *args):
+        x = raw(input, *args)
+        x = x.clone()
+        layer_name = translog.add_layer(name='isub', torch_name=torch_name)
+        top_blobs = translog.add_blobs([x], name='sub_blob')
+        layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
+                                    bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
+        layer.param.eltwise_param.operation = 1  # sum is 1
+        translog.cnet.add_layer(layer)
+        return x
 
-def _isub(translog, raw, input, *args, torch_name=None):
-    x = t.__isub__(input, *args)
-    x = x.clone()
-    layer_name = translog.add_layer(name='isub', torch_name=torch_name)
-    top_blobs = translog.add_blobs([x], name='sub_blob')
-    layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
-                                  bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
-    layer.param.eltwise_param.operation = 1  # sum is 1
-    translog.cnet.add_layer(layer)
-    return x
-
+    return __patched_isub    
 
 # TODO: support scalar operation using power layer (y = (shift + scale * x) ^ power, set shift = 0, power = 1)
-def _mul(translog, raw, input, *args, torch_name=None):
-    x = t.__mul__(input, *args)  # x is a torch Tensor
-    if id(input) not in translog.keys():
+def _mul(raw, translog):
+
+    def __patched_mul__(input, *args):
+        x = raw(input, *args)
+        if id(input) not in translog.keys():
+            return x
+        # element wise mul using scale layer
+        if isinstance(args[0], float):
+            layer_name = translog.add_layer(name='mul', torch_name=torch_name)
+            top_blobs = translog.add_blobs([x], name='mul_blob')
+            layer = caffe_net.Layer_param(name=layer_name, type='Scale',
+                                        bottom=[translog.blobs[id(input)]], top=[translog.blobs[id(x)]])
+            layer.param.scale_param.bias_term = False
+            scale = torch.ones(x.size()[1], dtype=x.dtype)
+            layer.add_data(scale.numpy())
+            translog.cnet.add_layer(layer)
+            return x
+        assert args[0].shape[0] == input.shape[0] and args[0].shape[1] == input.shape[1]
+        if not (args[0].shape[2] == input.shape[2] and args[0].shape[3] == input.shape[3]):
+            print(
+                "WARNING: DPU cannot handle this implictly-broadcast elementwise multiplication efficiently! {} with {}".format(
+                    args[0].shape, input.shape))
+            # Handle implicitly broadcast in pytorch, reshape -> scale;
+            # Actually this is not support by DPU (2019.10.16)
+            # add reshape layer
+            assert args[0].shape[2] == 1 and args[0].shape[3] == 1
+            layer_name = translog.add_layer(name="reshape", torch_name=torch_name)
+            y = args[0].view(args[0].shape[0], -1)
+            layer_name = translog.add_layer(name='mul', torch_name=torch_name)
+            top_blobs = translog.add_blobs([x], name='mul_blob')
+            layer = caffe_net.Layer_param(name=layer_name, type='Scale',
+                                        bottom=[translog.blobs[id(input)], translog.blobs[id(y)]], top=[translog.blobs[id(x)]])
+            layer.param.scale_param.bias_term = False
+            layer.param.scale_param.axis = 0
+            translog.cnet.add_layer(layer)
+        else:
+            # acutally, dpu only support elementwise...
+            layer_name = translog.add_layer(name='mul', torch_name=torch_name)
+            top_blobs = translog.add_blobs([x], name='mul_blob')
+            layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
+                                        bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
+            layer.param.eltwise_param.operation = 0  # product is 1
+            translog.cnet.add_layer(layer)
         return x
-    # element wise mul using scale layer
-    if isinstance(args[0], float):
-        layer_name = translog.add_layer(name='mul', torch_name=torch_name)
-        top_blobs = translog.add_blobs([x], name='mul_blob')
-        layer = caffe_net.Layer_param(name=layer_name, type='Scale',
-                                      bottom=[translog.blobs[id(input)]], top=[translog.blobs[id(x)]])
-        layer.param.scale_param.bias_term = False
-        scale = torch.ones(x.size()[1], dtype=x.dtype)
-        layer.add_data(scale.numpy())
-        translog.cnet.add_layer(layer)
-        return x
-    assert args[0].shape[0] == input.shape[0] and args[0].shape[1] == input.shape[1]
-    if not (args[0].shape[2] == input.shape[2] and args[0].shape[3] == input.shape[3]):
-        print(
-            "WARNING: DPU cannot handle this implictly-broadcast elementwise multiplication efficiently! {} with {}".format(
-                args[0].shape, input.shape))
-        # Handle implicitly broadcast in pytorch, reshape -> scale;
-        # Actually this is not support by DPU (2019.10.16)
-        # add reshape layer
-        assert args[0].shape[2] == 1 and args[0].shape[3] == 1
-        layer_name = translog.add_layer(name="reshape", torch_name=torch_name)
-        y = args[0].view(args[0].shape[0], -1)
-        layer_name = translog.add_layer(name='mul', torch_name=torch_name)
-        top_blobs = translog.add_blobs([x], name='mul_blob')
-        layer = caffe_net.Layer_param(name=layer_name, type='Scale',
-                                      bottom=[translog.blobs[id(input)], translog.blobs[id(y)]], top=[translog.blobs[id(x)]])
-        layer.param.scale_param.bias_term = False
-        layer.param.scale_param.axis = 0
-        translog.cnet.add_layer(layer)
-    else:
-        # acutally, dpu only support elementwise...
+
+    return __patched_mul__    
+
+
+def _imul(raw, translog):
+
+    def __patched_imul__(input, *args):
+        x = raw(input, *args)
+        x = x.clone()
         layer_name = translog.add_layer(name='mul', torch_name=torch_name)
         top_blobs = translog.add_blobs([x], name='mul_blob')
         layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
-                                      bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
+                                    bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
         layer.param.eltwise_param.operation = 0  # product is 1
+        layer.param.eltwise_param.coeff.extend([1., -1.])
         translog.cnet.add_layer(layer)
-    return x
+        return x
 
-
-def _imul(translog, raw, input, *args, torch_name=None):
-    x = t.__imul__(input, *args)
-    x = x.clone()
-    layer_name = translog.add_layer(name='mul', torch_name=torch_name)
-    top_blobs = translog.add_blobs([x], name='mul_blob')
-    layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
-                                  bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
-    layer.param.eltwise_param.operation = 0  # product is 1
-    layer.param.eltwise_param.coeff.extend([1., -1.])
-    translog.cnet.add_layer(layer)
-    return x
-
+    return __patched_imul__    
+        
 
 # TODO: support division: determine which method is called, now we know that torch.Tensor.__div__ and torch.Tensor.__idiv__ are not called.
-def _div(translog, raw, input, *args, torch_name=None):
-    x = t.__div__(input, *args)
-    # element wise mul using scale layer
-    if isinstance(args[0], float):
-        layer_name = translog.add_layer(name='div', torch_name=torch_name)
-        top_blobs = translog.add_blobs([x], name='div_blob')
-        layer = caffe_net.Layer_param(name=layer_name, type='Scale',
-                                      bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
-        layer.param.scale_param.bias_term = False
-        layer.param.scale_param.axis = 0
+def _div(raw, translog):
+    
+    def __patched_div__(input, *args):
+        x = raw(input, *args)
+        # element wise mul using scale layer
+        if isinstance(args[0], float):
+            layer_name = translog.add_layer(name='div', torch_name=torch_name)
+            top_blobs = translog.add_blobs([x], name='div_blob')
+            layer = caffe_net.Layer_param(name=layer_name, type='Scale',
+                                        bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
+            layer.param.scale_param.bias_term = False
+            layer.param.scale_param.axis = 0
+            translog.cnet.add_layer(layer)
+            return x
+
+        assert args[0].shape[0] == input.shape[0] and args[0].shape[1] == input.shape[1]
+        if not (args[0].shape[2] == input.shape[2] and args[0].shape[3] == input.shape[3]):
+            print(
+                "WARNING: DPU cannot handle this implictly-broadcast elementwise multiplication efficiently! {} with {}".format(
+                    args[0].shape, input.shape))
+            # Handle implicitly broadcast in pytorch, reshape -> scale;
+            # Actually this is not support by DPU (2019.10.16)
+            # add reshape layer
+            assert args[0].shape[2] == 1 and args[0].shape[3] == 1
+            layer_name = translog.add_layer(name="reshape", torch_name=torch_name)
+            y = args[0].view(args[0].shape[0], -1)
+            layer_name = translog.add_layer(name='div', torch_name=torch_name)
+            top_blobs = translog.add_blobs([x], name='div_blob')
+            layer = caffe_net.Layer_param(name=layer_name, type='Scale',
+                                        bottom=[translog.blobs[id(input)], translog.blobs[id(y)]], top=[translog.blobs[id(x)]])
+            layer.param.scale_param.bias_term = False
+            layer.param.scale_param.axis = 0
+        else:
+            # acutally, dpu only support elementwise...
+            layer_name = translog.add_layer(name='div', torch_name=torch_name)
+            top_blobs = translog.add_blobs([x], name='div_blob')
+            layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
+                                        bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
+            layer.param.eltwise_param.operation = 0  # product is 1
         translog.cnet.add_layer(layer)
         return x
 
-    assert args[0].shape[0] == input.shape[0] and args[0].shape[1] == input.shape[1]
-    if not (args[0].shape[2] == input.shape[2] and args[0].shape[3] == input.shape[3]):
-        print(
-            "WARNING: DPU cannot handle this implictly-broadcast elementwise multiplication efficiently! {} with {}".format(
-                args[0].shape, input.shape))
-        # Handle implicitly broadcast in pytorch, reshape -> scale;
-        # Actually this is not support by DPU (2019.10.16)
-        # add reshape layer
-        assert args[0].shape[2] == 1 and args[0].shape[3] == 1
-        layer_name = translog.add_layer(name="reshape", torch_name=torch_name)
-        y = args[0].view(args[0].shape[0], -1)
-        layer_name = translog.add_layer(name='div', torch_name=torch_name)
-        top_blobs = translog.add_blobs([x], name='div_blob')
-        layer = caffe_net.Layer_param(name=layer_name, type='Scale',
-                                      bottom=[translog.blobs[id(input)], translog.blobs[id(y)]], top=[translog.blobs[id(x)]])
-        layer.param.scale_param.bias_term = False
-        layer.param.scale_param.axis = 0
-    else:
-        # acutally, dpu only support elementwise...
+    return __patched_div__    
+
+
+def _idiv(raw, translog):
+
+    def __patched_idiv__(input, *args):
+        x = raw(input, *args)
+        x = x.clone()
         layer_name = translog.add_layer(name='div', torch_name=torch_name)
         top_blobs = translog.add_blobs([x], name='div_blob')
         layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
-                                      bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
+                                    bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
         layer.param.eltwise_param.operation = 0  # product is 1
-    translog.cnet.add_layer(layer)
-    return x
+        layer.param.eltwise_param.coeff.extend([1., -1.])
+        translog.cnet.add_layer(layer)
+        return x
 
-
-def _idiv(translog, raw, input, *args, torch_name=None):
-    x = t.__idiv__(input, *args)
-    x = x.clone()
-    layer_name = translog.add_layer(name='div', torch_name=torch_name)
-    top_blobs = translog.add_blobs([x], name='div_blob')
-    layer = caffe_net.Layer_param(name=layer_name, type='Eltwise',
-                                  bottom=[translog.blobs[id(input)], translog.blobs[id(args[0])]], top=[translog.blobs[id(x)]])
-    layer.param.eltwise_param.operation = 0  # product is 1
-    layer.param.eltwise_param.coeff.extend([1., -1.])
-    translog.cnet.add_layer(layer)
-    return x
-
-def _v_sigmoid(translog, raw, tensor):
-    return torch.sigmoid(tensor)
+    return __patched_idiv__    

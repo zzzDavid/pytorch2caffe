@@ -2,7 +2,7 @@ from logging import exception
 from Translate.functions import _conv2d, _linear, _relu, _relu6, _leaky_relu, \
     _max_pool2d, _avg_pool2d, _dropout, _threshold, _prelu, _batch_norm, _instance_norm, \
     _softmax, _conv_transpose2d, _interpolate, _sigmoid, _tanh, _squeeze, _flatten, \
-    _split, _max, _cat, _mean, _view, _add, _iadd, _sub, _isub, _mul, _imul, _div, _idiv, _v_sigmoid    
+    _split, _max, _cat, _mean, _view, _add, _iadd, _sub, _isub, _mul, _imul, _div, _idiv
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
@@ -67,20 +67,16 @@ def replace_functions(translog, torch_layer_dict):
     torch.cat            = Rp(torch.cat,_cat, translog, torch_layer_dict)
 
     # Replace Tensor operations
+    t.__view__ = _view(t.__view__, translog)
+    t.__mean__ = _mean(t.__mean__, translog)
+    t.__add__ = _add(t.__add__, translog)
     t.__iadd__ = _iadd(t.__iadd__, translog)
-    # t.view = Rp(t.view, _view, translog)
-    # t.sigmoid = Rp(t.sigmoid, _v_sigmoid, translog)
-    # t.mean = Rp(t.mean, _mean, translog)
-    # t.__add__ = Rp(t.__add__, _add, translog)
-    # #t.__iadd__ = Rp(t.__iadd__, _iadd, translog)
-    # from Translate.functions import _iadd2
-    # t.__iadd__ = Rp(t.__iadd__, _iadd2, translog)._iadd
-    # t.__sub__ = Rp(t.__sub__, _sub, translog)
-    # t.__isub__ = Rp(t.__isub__, _isub, translog)
-    # t.__mul__= Rp(t.__mul__, _mul, translog)
-    # t.__imul__ = Rp(t.__imul__, _imul, translog)
-    # t.__div__ = Rp(t.__div__, _div, translog)
-    # t.__idiv__ = Rp(t.__idiv__, _idiv, translog)
+    t.__sub__ = _sub(t.__sub__, translog)
+    t.__isub__ = _isub(t.__isub__, translog)
+    t.__mul__ = _mul(t.__mul__, translog)
+    t.__imul__ = _imul(t.__imul__, translog)
+    t.__div__ = _div(t.__div__, translog)
+    t.__idiv__ = _idiv(t.__idiv__, translog)
 
     logger.info("torch functions have been replaced")
     

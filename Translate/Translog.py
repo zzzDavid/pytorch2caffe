@@ -73,7 +73,7 @@ class TransLog(object):
         self.layers[name] = name # ? what is it doing
         # if self.debug:
         #     print("{} was added to layers".format(self.layers[name]))
-        self.torch_to_caffe_names[torch_name] = self.layers[name]
+        if torch_name is not None: self.torch_to_caffe_names[torch_name] = self.layers[name]
         return self.layers[name]
 
     def add_blobs(self, blobs, name='blob', with_num=True):
