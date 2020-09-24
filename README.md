@@ -19,14 +19,17 @@ def your_function(model):
 
     # initialize a pytorch2caffe object
     torch2caffe = pytorch2caffe(model)
+
     # set input
     torch2caffe.set_input(input, source, root_folder, batch_size, new_height, new_width)
+
     # translate 
     torch2caffe.trans_net('resnet50')
+
     # save results
-    torch2.caffe.save_prototxt('resnet50.prototxt')
-    torch2caffe.save_caffemodel('resnet50.caffemodel')
-    torch2caffe.save_torch2caffe_names_json('torch2caffe_names.json')
+    torch2.caffe.save_prototxt('./resnet50.prototxt')
+    torch2caffe.save_caffemodel('./resnet50.caffemodel')
+    torch2caffe.save_torch2caffe_names_json('./torch2caffe_names.json')
 
 ```
 
@@ -34,7 +37,7 @@ def your_function(model):
 
 - [x]  Added None blob checking
 
-- [x] Fixed input layer issues: Vitis requires input blob is named `data`, and it must be a input layer, not input field.
+- [x] Fixed input layer issues: Vitis requires input blob is named `data`, and it must be an input layer, not input field.
 
 - [x] Add input data source and loss layer
 
