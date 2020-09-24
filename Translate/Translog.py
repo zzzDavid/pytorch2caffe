@@ -8,7 +8,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-
 class TransLog(object):
     """
     self.blobs: 

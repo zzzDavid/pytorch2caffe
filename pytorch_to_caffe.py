@@ -69,13 +69,13 @@ def replace_functions(translog, torch_layer_dict):
     # Replace Tensor operations
     t.__view__ = _view(t.__view__, translog)
     t.__mean__ = _mean(t.__mean__, translog)
-    t.__add__ = _add(t.__add__, translog)
+    t.__add__  = _add(t.__add__, translog)
     t.__iadd__ = _iadd(t.__iadd__, translog)
-    t.__sub__ = _sub(t.__sub__, translog)
+    t.__sub__  = _sub(t.__sub__, translog)
     t.__isub__ = _isub(t.__isub__, translog)
-    t.__mul__ = _mul(t.__mul__, translog)
+    t.__mul__  = _mul(t.__mul__, translog)
     t.__imul__ = _imul(t.__imul__, translog)
-    t.__div__ = _div(t.__div__, translog)
+    t.__div__  = _div(t.__div__, translog)
     t.__idiv__ = _idiv(t.__idiv__, translog)
 
     logger.info("torch functions have been replaced")
@@ -91,11 +91,14 @@ class pytorch2caffe(object):
             self.layer_names[layer] = name
         replace_functions(self.translog, self.layer_names)
 
-    def trans_net(self, input_var, name='TransferedPytorchModel'):
+    def set_input(self, input_var, source='', root_folder='', batch_size=1, new_height=224, new_width=224):
+        self.translog.set_input(input_var, source, root_folder, batch_size, new_height, new_width)
+        self.input_var = input_var   
+
+    def trans_net(self, name='TransferedPytorchModel'):
         # import ipdb; ipdb.set_trace()
         self.translog.set_net_name(name)
-        self.translog.set_input(input_var)
-        x = self.model.forward(input_var)
+        x = self.model.forward(self.input_var)
         self.translog.set_softmaxwithloss(x)
 
         # torch to caffe names
@@ -111,3 +114,9 @@ class pytorch2caffe(object):
     def save_caffemodel(self, save_name):
         logger.info("saving caffemodel to: " + save_name + " ...")
         self.translog.cnet.save(save_name)
+
+    def save_torch2caffe_names_json(self, save_name):
+        logger.info("saving torch2caffe names to: " + save_name + " ...")
+        import json
+        with open(save_name, 'w') as f:
+            json.dump(f, self.trans_net.torch_to_caffe_names, sort_keys=True, indent=2)

@@ -6,9 +6,28 @@ This tool is for converting PyTorch CNN models to Caffe network configuration fi
 ## API
 
 ```python
-trans_net()
-save_prototxt()
-save_caffemodel()
+from pytorch_to_caffe import pytorch2caffe
+
+def your_function(model):
+    # set up input layer information
+    input = Variable(torch.ones([1, 3, 416, 416]))
+    source = '/path/to/image_list.txt'
+    root_foler = 'path/to/image_folder'
+    batch_size = 1
+    new_height = 416
+    new_width = 416
+
+    # initialize a pytorch2caffe object
+    torch2caffe = pytorch2caffe(model)
+    # set input
+    torch2caffe.set_input(input, source, root_folder, batch_size, new_height, new_width)
+    # translate 
+    torch2caffe.trans_net('resnet50')
+    # save results
+    torch2.caffe.save_prototxt('resnet50.prototxt')
+    torch2caffe.save_caffemodel('resnet50.caffemodel')
+    torch2caffe.save_torch2caffe_names_json('torch2caffe_names.json')
+
 ```
 
 ## Done
