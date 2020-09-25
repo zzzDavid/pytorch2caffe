@@ -6,7 +6,10 @@ This tool is for converting PyTorch CNN models to Caffe network configuration fi
 ## API
 
 ```python
-from pytorch_to_caffe import pytorch2caffe
+import sys
+sys.path.append('/path/to/pytorch2caffe/directory')
+
+from torch2caffe.pycorch_to_caffe import pytorch2caffe
 
 def your_function(model):
     # set up input layer information

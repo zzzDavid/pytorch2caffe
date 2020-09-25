@@ -3,7 +3,7 @@ import sys, os
 from pathlib import Path
 path = Path(os.getcwd())
 sys.path.append(str(path.parent))
-from pytorch_to_caffe import pytorch2caffe
+from torch2caffe.pytorch_to_caffe import pytorch2caffe
 import numpy as np
 from torch.autograd import Variable
 import torch
