@@ -27,7 +27,7 @@ def your_function(model):
     torch2caffe.trans_net('resnet50')
 
     # save results
-    torch2.caffe.save_prototxt('./resnet50.prototxt')
+    torch2caffe.save_prototxt('./resnet50.prototxt')
     torch2caffe.save_caffemodel('./resnet50.caffemodel')
     torch2caffe.save_torch2caffe_names_json('./torch2caffe_names.json')
 
