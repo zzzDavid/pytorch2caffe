@@ -738,7 +738,7 @@ def _mean(raw, translog):
 def _add(raw, translog):
     def __patched_add__(input, *args):
         x = raw(input, *args)
-        layer_name = translog.add_layer(name="add", torch_name=torch_name)
+        layer_name = translog.add_layer(name="add")
         top_blobs = translog.add_blobs([x], name="add_blob")
         if isinstance(args[0], (int, float)):
             # handle add constant bias
@@ -799,7 +799,7 @@ def _iadd(raw, translog):
 def _sub(raw, translog):
     def __patched_sub__(input, *args):
         x = raw(input, *args)
-        layer_name = translog.add_layer(name="sub", torch_name=torch_name)
+        layer_name = translog.add_layer(name="sub")
         top_blobs = translog.add_blobs([x], name="sub_blob")
         layer = caffe_net.Layer_param(
             name=layer_name,
@@ -819,7 +819,7 @@ def _isub(raw, translog):
     def __patched_isub(input, *args):
         x = raw(input, *args)
         x = x.clone()
-        layer_name = translog.add_layer(name="isub", torch_name=torch_name)
+        layer_name = translog.add_layer(name="isub")
         top_blobs = translog.add_blobs([x], name="sub_blob")
         layer = caffe_net.Layer_param(
             name=layer_name,
@@ -842,7 +842,7 @@ def _mul(raw, translog):
             return x
         # element wise mul using scale layer
         if isinstance(args[0], float):
-            layer_name = translog.add_layer(name="mul", torch_name=torch_name)
+            layer_name = translog.add_layer(name="mul")
             top_blobs = translog.add_blobs([x], name="mul_blob")
             layer = caffe_net.Layer_param(
                 name=layer_name,
@@ -868,9 +868,9 @@ def _mul(raw, translog):
             # Actually this is not support by DPU (2019.10.16)
             # add reshape layer
             assert args[0].shape[2] == 1 and args[0].shape[3] == 1
-            layer_name = translog.add_layer(name="reshape", torch_name=torch_name)
+            layer_name = translog.add_layer(name="reshape")
             y = args[0].view(args[0].shape[0], -1)
-            layer_name = translog.add_layer(name="mul", torch_name=torch_name)
+            layer_name = translog.add_layer(name="mul")
             top_blobs = translog.add_blobs([x], name="mul_blob")
             layer = caffe_net.Layer_param(
                 name=layer_name,
@@ -883,7 +883,7 @@ def _mul(raw, translog):
             translog.cnet.add_layer(layer)
         else:
             # acutally, dpu only support elementwise...
-            layer_name = translog.add_layer(name="mul", torch_name=torch_name)
+            layer_name = translog.add_layer(name="mul")
             top_blobs = translog.add_blobs([x], name="mul_blob")
             layer = caffe_net.Layer_param(
                 name=layer_name,
@@ -902,7 +902,7 @@ def _imul(raw, translog):
     def __patched_imul__(input, *args):
         x = raw(input, *args)
         x = x.clone()
-        layer_name = translog.add_layer(name="mul", torch_name=torch_name)
+        layer_name = translog.add_layer(name="mul")
         top_blobs = translog.add_blobs([x], name="mul_blob")
         layer = caffe_net.Layer_param(
             name=layer_name,
@@ -924,7 +924,7 @@ def _div(raw, translog):
         x = raw(input, *args)
         # element wise mul using scale layer
         if isinstance(args[0], float):
-            layer_name = translog.add_layer(name="div", torch_name=torch_name)
+            layer_name = translog.add_layer(name="div")
             top_blobs = translog.add_blobs([x], name="div_blob")
             layer = caffe_net.Layer_param(
                 name=layer_name,
@@ -950,9 +950,9 @@ def _div(raw, translog):
             # Actually this is not support by DPU (2019.10.16)
             # add reshape layer
             assert args[0].shape[2] == 1 and args[0].shape[3] == 1
-            layer_name = translog.add_layer(name="reshape", torch_name=torch_name)
+            layer_name = translog.add_layer(name="reshape")
             y = args[0].view(args[0].shape[0], -1)
-            layer_name = translog.add_layer(name="div", torch_name=torch_name)
+            layer_name = translog.add_layer(name="div")
             top_blobs = translog.add_blobs([x], name="div_blob")
             layer = caffe_net.Layer_param(
                 name=layer_name,
@@ -964,7 +964,7 @@ def _div(raw, translog):
             layer.param.scale_param.axis = 0
         else:
             # acutally, dpu only support elementwise...
-            layer_name = translog.add_layer(name="div", torch_name=torch_name)
+            layer_name = translog.add_layer(name="div")
             top_blobs = translog.add_blobs([x], name="div_blob")
             layer = caffe_net.Layer_param(
                 name=layer_name,
@@ -983,7 +983,7 @@ def _idiv(raw, translog):
     def __patched_idiv__(input, *args):
         x = raw(input, *args)
         x = x.clone()
-        layer_name = translog.add_layer(name="div", torch_name=torch_name)
+        layer_name = translog.add_layer(name="div")
         top_blobs = translog.add_blobs([x], name="div_blob")
         layer = caffe_net.Layer_param(
             name=layer_name,
