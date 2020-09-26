@@ -27,7 +27,7 @@ def _conv2d(
     layer_name = translog.add_layer(name="conv", torch_name=torch_name)
     top_blob_names = translog.add_blobs([x], name="conv_blob")
     logger.info(
-        f"---> layer name: {layer_name}, bottom blobs: {[translog.blobs[id(input)]]}, top blobs: {top_blob_names}"
+        f"---> layer name: {layer_name}, bottom blobs: {[translog.blobs[id(input)]]}, shape={input.shape}, top blobs: {top_blob_names}, shape={x.shape}"
     )
     layer = caffe_net.Layer_param(
         name=layer_name,
@@ -709,7 +709,7 @@ def _view(raw, translog):
 
     return __patched_view__
 
-
+# TODO: Reduction layer is not supported
 def _mean(raw, translog):
     def __patched_mean__(input, *args, **kwargs):
         x = raw(input, *args, **kwargs)
