@@ -53,7 +53,7 @@ def your_function(model):
 
 - [ ] Global average pooling support: `torch.nn.AdaptiveAvgPooling2d(1,1)`
 
-- [ ] Remove `Reduction` layer, and check `x.mean(2).mean(3)` which is supposed to be a global average pooling layer in caffe
+- [ ] Remove `Reduction` layer, and check `x.mean(3).mean(2)` which is supposed to be a global average pooling layer in caffe
 
 ## Note
 

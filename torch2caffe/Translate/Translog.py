@@ -107,3 +107,36 @@ class TransLog(object):
             # self._logger.info(f'blob: {rst[-1]} was added to the list')
             self.blobs[blob_id] = rst[-1]
         return rst
+
+    def post_check(self):
+
+        # import ipdb; ipdb.set_trace()
+        
+        # check Reduction layer
+        for i, layer in enumerate(self.cnet.layers()):
+            if not layer.type == 'Reduction': continue
+            import ipdb; ipdb.set_trace()
+            layers = self.cnet.layers()
+            if i + 1 > len(layers) - 1: continue
+            next_layer =  layers[i+1]
+            if next_layer.type == 'Reduction':
+                # remove the two reduction layers
+                # and add an average global pooling layer
+                bottoms = layer.bottom
+                tops = next_layer.top
+                layer_name = "global_avg_pool"
+                layer_param = caffe_net.Layer_param(
+                    name = layer_name,
+                    type="Pooling",
+                    bottom = bottoms,
+                    top = tops
+                )
+                layer_param.pool_param(
+                    type='AVE',
+                    global_pooling=True
+                )
+
+                self.cnet.remove_layer_by_name(layer.name)
+                self.cnet.remove_layer_by_name(next_layer.name)
+                self.cnet.add_layer(layer_param)
+                logger.info("Reduction layer pair is removed.")

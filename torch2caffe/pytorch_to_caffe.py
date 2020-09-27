@@ -40,6 +40,9 @@ class pytorch2caffe(object):
         x = self.model.forward(self.input_var)
         self.translog.set_softmaxwithloss(x)
 
+        # post check
+        self.translog.post_check()
+
         # torch to caffe names
         logger.debug("printing torch to caffe names: ")
         for key, value in self.translog.torch_to_caffe_names.items():

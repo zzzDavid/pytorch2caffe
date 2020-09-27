@@ -99,11 +99,11 @@ class Caffemodel(_Net):
         with open(path,'wb') as f:
             f.write(self.net.SerializeToString())
 
-    def add_layer_with_data(self,layer_params,datas, before='', after=''):
+    def add_layer_with_data(self,layer_params,data, before='', after=''):
         """
         Args:
             layer_params:A Layer_Param object
-            datas:a fixed dimension numpy object list
+            data:a fixed dimension numpy object list
             after: put the layer after a specified layer
             before: put the layer before a specified layer
         """
@@ -112,7 +112,7 @@ class Caffemodel(_Net):
 
         #process blobs
         del new_layer.blobs[:]
-        for data in datas:
+        for data in data:
             new_blob=new_layer.blobs.add()
             for dim in data.shape:
                 new_blob.shape.dim.append(dim)
@@ -120,17 +120,17 @@ class Caffemodel(_Net):
 
     def get_layer_data(self,layer_name):
         layer=self.layer(layer_name)
-        datas=[]
+        data=[]
         for blob in layer.blobs:
             shape=list(blob.shape.dim)
             data=np.array(blob.data).reshape(shape)
-            datas.append(data)
-        return datas
+            data.append(data)
+        return data
 
-    def set_layer_data(self,layer_name,datas):
-        # datas is normally a list of [weights,bias]
+    def set_layer_data(self,layer_name,data):
+        # data is normally a list of [weights,bias]
         layer=self.layer(layer_name)
-        for blob,data in zip(layer.blobs,datas):
+        for blob,data in zip(layer.blobs,data):
             blob.data[:]=data.flatten()
             pass
 

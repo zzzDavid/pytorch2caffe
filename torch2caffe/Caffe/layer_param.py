@@ -95,11 +95,12 @@ class Layer_param():
             conv_param.group=groups
         self.param.convolution_param.CopyFrom(conv_param)
 
-    def pool_param(self,type='MAX',kernel_size=2,stride=2,pad=None):
+    def pool_param(self,type='MAX',kernel_size=2,stride=2,pad=None,global_pooling=False):
         pool_param=pb.PoolingParameter()
         pool_param.pool=pool_param.PoolMethod.Value(type)
         pool_param.kernel_size=pair_process(kernel_size)
         pool_param.stride=pair_process(stride)
+        pool_param.global_pooling = global_pooling
         # pool_param.ceil_mode=ceil_mode
         if pad:
             if isinstance(pad,tuple):

@@ -9,17 +9,6 @@ from torch.autograd import Variable
 import torch
 import torch.nn as nn
 
-class test_model(nn.Module):
-    def __init__(self):
-        super(test_model, self).__init__()
-    def forward(self, x):
-        # import ipdb; ipdb.set_trace()
-        y = x + 1
-        x = x + y
-        x += 1
-        # import ipdb; ipdb.set_trace()
-        return x
-
 if __name__ == "__main__":
     model = resnet50(pretrained=False)
     # model = test_model()
