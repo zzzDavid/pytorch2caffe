@@ -46,6 +46,8 @@ def your_function(model):
 
 - [x] Tensor operations are supported
 
+- [x] Remove `Reduction` layer, and check `x.mean(3).mean(2)` which is supposed to be a global average pooling layer in caffe
+
 ## TODO
 
 
@@ -53,7 +55,7 @@ def your_function(model):
 
 - [ ] Global average pooling support: `torch.nn.AdaptiveAvgPooling2d(1,1)`
 
-- [ ] Remove `Reduction` layer, and check `x.mean(3).mean(2)` which is supposed to be a global average pooling layer in caffe
+
 
 ## Note
 
@@ -62,3 +64,7 @@ def your_function(model):
 We have a `dict()` in class `Translog` to record the torch function names and their corresponding caffe layer names. But we don't have that information for tensor operations. 
 
 For example, `+=` can convert into `Eltwise` in Caffe, but it does not have torch name since it is not a function.
+
+2. DPU does not support Global Average Pooling
+
+Global average pooling is moved to CPU, resulting in multiple kernels. 

@@ -110,12 +110,15 @@ class TransLog(object):
 
     def post_check(self):
 
-        # import ipdb; ipdb.set_trace()
+        self.replace_with_global_avg_pooling()        
+        # for DPU
+        self.remove_global_avg_pooling()
         
+
+    def replace_with_global_avg_pooling(self):        
         # check Reduction layer
         for i, layer in enumerate(self.cnet.layers()):
             if not layer.type == 'Reduction': continue
-            import ipdb; ipdb.set_trace()
             layers = self.cnet.layers()
             if i + 1 > len(layers) - 1: continue
             next_layer =  layers[i+1]
@@ -133,10 +136,61 @@ class TransLog(object):
                 )
                 layer_param.pool_param(
                     type='AVE',
-                    global_pooling=True
+                    global_pooling=True,
+                    kernel_size=None,
+                    stride=None
                 )
+                if i + 2 <= len(layers) - 1:
+                    del self.cnet.layers()[i+2].bottom[:]
+                    self.cnet.layers()[i+2].bottom.extend(tops)
 
                 self.cnet.remove_layer_by_name(layer.name)
                 self.cnet.remove_layer_by_name(next_layer.name)
-                self.cnet.add_layer(layer_param)
+                self.cnet.add_layer(layer_param, before=layers[i+2].name)
+                
                 logger.info("Reduction layer pair is removed.")
+
+    def replace_with_flatten(self):        
+        # check Reduction layer
+        for i, layer in enumerate(self.cnet.layers()):
+            if not layer.type == 'Reduction': continue
+            layers = self.cnet.layers()
+            if i + 1 > len(layers) - 1: continue
+            next_layer =  layers[i+1]
+            if next_layer.type == 'Reduction':
+                # remove the two reduction layers
+                # and add an average global pooling layer
+                bottoms = layer.bottom
+                tops = next_layer.top
+                layer_name = "flatten"
+                layer_param = caffe_net.Layer_param(
+                    name = layer_name,
+                    type="Flatten",
+                    bottom = bottoms,
+                    top = tops
+                )
+                if i + 2 <= len(layers) - 1:
+                    del self.cnet.layers()[i+2].bottom[:]
+                    self.cnet.layers()[i+2].bottom.extend(tops)
+
+                self.cnet.remove_layer_by_name(layer.name)
+                self.cnet.remove_layer_by_name(next_layer.name)
+                self.cnet.add_layer(layer_param, before=layers[i+2].name)
+                
+                logger.info("Reduction layer pair is removed.")                
+
+    def remove_global_avg_pooling(self):
+        """
+        DPU does not support global average pooling, so we remove
+        global average pooling along with FC
+        """
+        remove_list = list()
+        k = -1
+        for i, layer in enumerate(self.cnet.layers()):
+            if layer.type == 'Pooling' and layer.pooling_param.global_pooling: 
+                k = i    
+            if k > 0 and i >= k:
+                # import ipdb; ipdb.set_trace()
+                remove_list.append(layer.name)
+        for layer_name in remove_list:
+            self.cnet.remove_layer_by_name(layer_name)        

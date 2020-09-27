@@ -38,7 +38,7 @@ class pytorch2caffe(object):
         # import ipdb; ipdb.set_trace()
         self.translog.set_net_name(name)
         x = self.model.forward(self.input_var)
-        self.translog.set_softmaxwithloss(x)
+        # self.translog.set_softmaxwithloss(x)
 
         # post check
         self.translog.post_check()
