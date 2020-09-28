@@ -50,9 +50,7 @@ class TransLog(object):
         label_blob = self.add_blobs(
             [torch.ones(1)], name="label", with_num=False
         )  # just a placeholder
-        top_blobs += label_blob
         layer_name = self.add_layer(name="input")
-        logger.info(f"---> layer name: {layer_name}, top blobs: {top_blobs}")
 
         if source == "" or root_folder == "" : 
             # if we do not specify input images  
@@ -61,15 +59,19 @@ class TransLog(object):
             )
             layer_param.input_param([batch_size, 3, new_height, new_width])
             self.cnet.add_layer(layer_param)
+            logger.info(f"---> layer name: {layer_name}, top blobs: {top_blobs}")
             return
 
         # if we specify input images
+        top_blobs += label_blob
         layer_param = caffe_net.Layer_param(
             name=layer_name, type="ImageData", top=top_blobs
         )
         # import ipdb; ipdb.set_trace()
         layer_param.image_data_param(source, root_folder, batch_size, new_height, new_width)
         self.cnet.add_layer(layer_param)
+        logger.info(f"---> layer name: {layer_name}, top blobs: {top_blobs}")
+
 
     def set_softmaxwithloss(self, input_var):
         # import ipdb; ipdb.set_trace()
