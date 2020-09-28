@@ -36,7 +36,7 @@ class Layer_param():
     #     i_param = pb.InputParameter(shape=[pb.BlobShape(dim=dims)])
     #     self.param.input_param.CopyFrom(i_param)
 
-    def input_param(self, source, root_folder, batch_size, new_height, new_width):
+    def image_data_param(self, source, root_folder, batch_size, new_height, new_width):
         image_data_param = pb.ImageDataParameter()
         image_data_param.source = source
         image_data_param.root_folder = root_folder
@@ -45,6 +45,9 @@ class Layer_param():
         image_data_param.new_width = new_width
         self.param.image_data_param.CopyFrom(image_data_param)
 
+    def input_param(self, shape):
+        input_param = pb.InputParameter(shape=[pb.BlobShape(dim=shape)])
+        self.param.input_param.CopyFrom(input_param)
 
     def bias_param(self, bias, trainable=False):
         if self.type != "Bias":

@@ -37,21 +37,21 @@ class _Net(object):
             if layer.name == layer_name:
                 del self.net.layer[i]
                 return
-        raise(AttributeError, "cannot found layer %s" % str(layer_name))
+        raise(AttributeError, "cannot find layer %s" % str(layer_name))
 
     def get_layer_by_name(self, layer_name):
         # get the layer by layer_name
         for layer in self.net.layer:
             if layer.name == layer_name:
                 return layer
-        raise(AttributeError, "cannot found layer %s" % str(layer_name))
+        raise(AttributeError, "cannot find layer %s" % str(layer_name))
 
     def save_prototxt(self,path):
         prototxt=pb.NetParameter()
         prototxt.CopyFrom(self.net)
         for layer in prototxt.layer:
             del layer.blobs[:]
-        with open(path,'w') as f:
+        with open(path,'w', encoding='utf-8') as f:
             f.write(text_format.MessageToString(prototxt))
 
     def layer(self,layer_name):
@@ -67,8 +67,12 @@ class Prototxt(_Net):
         super(Prototxt,self).__init__()
         self.file_name=file_name
         if file_name!='':
-            f = open(file_name,'r')
-            text_format.Parse(f.read(), self.net)
+            with open(file_name, 'r') as f:
+                content = f.read()
+            # with open(file_name, 'r', encoding='ANSI_X3.4-1968') as f:
+            #     text_format.Merge(f.read(), self.net)
+            text_format.Parse(content, self.net)
+            
             pass
 
     def init_caffemodel(self,caffe_cmd_path='caffe'):

@@ -6,14 +6,29 @@ with input layer.
 from ..Caffe import caffe_net
 import os
 
-def remove_ImageDataLayer(caffe_model_path):
-    if not os.path.exists(caffe_model_path):
-        raise Exception("caffemodel file does not exist")
-    cnet = caffe_net.Caffemodel(caffe_model_path)
-    name = caffe_model_path.replace('caffemodel', '')
-    for layer in cnet.layers():
-        if layer.type == "ImageData":
-            cnet.remove_layer_by_name(layer.name)
-    cnet.save_prototxt(name + ".prototxt")        
-    os.remove(caffe_model_path)
-    cnet.save(caffe_model_path)
+def remove_ImageDataLayer(protoxt_path):
+    if not os.path.exists(protoxt_path):
+        raise Exception("prototxt file does not exist")
+    cnet = caffe_net.Prototxt(protoxt_path)
+    for i, layer in enumerate(cnet.layers()):
+        if layer.type == "ImageData":            
+            # import ipdb; ipdb.set_trace()
+            first_layer_name = cnet.layers()[i+1].name
+            h = layer.image_data_param.new_height
+            w = layer.image_data_param.new_width
+            name = layer.name
+            del cnet.net.layer[i]
+    
+            # if there is no input layer, we add one
+            # if cnet.layers()[0].type != "Input":
+            #     shape = [1, 3, h, w]
+            #     layer_param = caffe_net.Layer_param(
+            #         name=name,
+            #         type="Input",
+            #         top=['data']
+            #     )
+            #     layer_param.input_param(shape)
+            #     cnet.add_layer(layer_param, before=first_layer_name)
+
+    os.remove(protoxt_path)
+    cnet.save_prototxt(protoxt_path)        
