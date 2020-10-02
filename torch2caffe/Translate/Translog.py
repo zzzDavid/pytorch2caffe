@@ -39,6 +39,7 @@ class TransLog(object):
         source="",
         root_folder="",
         batch_size=1,
+        channel = 3,
         new_height=224,
         new_width=224,
     ):
@@ -57,7 +58,7 @@ class TransLog(object):
             layer_param = caffe_net.Layer_param(
                 name=layer_name, type="Input", top=top_blobs
             )
-            layer_param.input_param([batch_size, 3, new_height, new_width])
+            layer_param.input_param([batch_size, channel, new_height, new_width])
             self.cnet.add_layer(layer_param)
             logger.info(f"---> layer name: {layer_name}, top blobs: {top_blobs}")
             return

@@ -244,6 +244,34 @@ def _avg_pool2d(
     )
     return x
 
+def _global_avg_pool2d(
+    translog,
+    raw,
+    input,
+    *args,
+    torch_name=None,
+):
+    x = raw(input, *args)
+    layer_name = translog.add_layer(name="global_avg_pool", torch_name=torch_name)
+    top_blobs = translog.add_blobs([x], name="avg_pool_blob")
+    logger.info(
+        f"---> layer name: {layer_name}, bottom blobs: {[translog.blobs[id(input)]]}, top blobs: {top_blobs}"
+    )
+    layer = caffe_net.Layer_param(
+        name=layer_name,
+        type="Pooling",
+        bottom=[translog.blobs[id(input)]],
+        top=[translog.blobs[id(x)]],
+    )
+    layer.pool_param(
+        kernel_size=None,
+        stride=None,
+        type='AVE',
+        global_pooling=True
+    )
+    translog.cnet.add_layer(layer)
+    return x
+
 
 def _max(translog, raw, *args, torch_name=None):
     x = raw(*args)

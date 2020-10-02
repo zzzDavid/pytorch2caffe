@@ -10,14 +10,20 @@ def remove_ImageDataLayer(protoxt_path):
     if not os.path.exists(protoxt_path):
         raise Exception("prototxt file does not exist")
     cnet = caffe_net.Prototxt(protoxt_path)
+    input_count = len([layer for layer in cnet.layers() if layer.type == "Input"])
     for i, layer in enumerate(cnet.layers()):
+        if layer.type == "Input": 
+            if input_count == 2:
+                del cnet.net.layer[i]
+                break
         if layer.type == "ImageData":            
             # import ipdb; ipdb.set_trace()
-            first_layer_name = cnet.layers()[i+1].name
-            h = layer.image_data_param.new_height
-            w = layer.image_data_param.new_width
-            name = layer.name
+            # first_layer_name = cnet.layers()[i+1].name
+            # h = layer.image_data_param.new_height
+            # w = layer.image_data_param.new_width
+            # name = layer.name
             del cnet.net.layer[i]
+            break
     
             # if there is no input layer, we add one
             # if cnet.layers()[0].type != "Input":

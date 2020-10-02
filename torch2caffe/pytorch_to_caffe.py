@@ -28,9 +28,10 @@ class pytorch2caffe(object):
         batch_size=1,
         new_height=224,
         new_width=224,
+        channel=3
     ):
         self.translog.set_input(
-            input_var, source, root_folder, batch_size, new_height, new_width
+            input_var, source, root_folder, batch_size, channel, new_height, new_width
         )
         self.input_var = input_var
 

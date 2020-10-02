@@ -7,6 +7,7 @@ from .functions import (
     _leaky_relu,
     _max_pool2d,
     _avg_pool2d,
+    _global_avg_pool2d,
     _dropout,
     _threshold,
     _prelu,
@@ -96,6 +97,9 @@ class Replacer():
 
         self.max_pool2d = F.max_pool2d
         F.max_pool2d = Rp(F.max_pool2d, _max_pool2d, translog, torch_layer_dict)
+
+        self.global_avg_pool2d = F.adaptive_avg_pool2d
+        F.adaptive_avg_pool2d = Rp(F.adaptive_avg_pool2d, _global_avg_pool2d, translog, torch_layer_dict)
 
         self.avg_pool2d = F.avg_pool2d
         F.avg_pool2d = Rp(F.avg_pool2d, _avg_pool2d, translog, torch_layer_dict)
@@ -191,6 +195,7 @@ class Replacer():
         F.leaky_relu = self.leaky_relu
         F.max_pool2d = self.max_pool2d
         F.avg_pool2d = self.avg_pool2d
+        F.adaptive_avg_pool2d = self.global_avg_pool2d
         F.dropout = self.dropout
         F.threshold = self.threshold
         F.prelu = self.prelu
