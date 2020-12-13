@@ -125,7 +125,7 @@ class TransLog(object):
 
         self.replace_with_global_avg_pooling()        
         # for DPU
-        self.remove_global_avg_pooling()
+        # self.remove_global_avg_pooling()
         
 
     def replace_with_global_avg_pooling(self):        

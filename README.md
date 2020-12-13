@@ -65,6 +65,32 @@ We have a `dict()` in class `Translog` to record the torch function names and th
 
 For example, `+=` can convert into `Eltwise` in Caffe, but it does not have torch name since it is not a function.
 
-2. DPU does not support Global Average Pooling
+2. ~DPU IP does not support Global Average Pooling~
 
-Global average pooling is moved to CPU, resulting in multiple kernels. 
+~Global average pooling is moved to CPU, resulting in multiple kernels.~
+
+It's actually supported. A working example:
+```prototxt
+layer {
+  name: "global_avg_pool"
+  type: "Pooling"
+  bottom: "batch_norm_blob49"
+  top: "mean_blob2"
+  pooling_param {
+    pool: AVE
+    global_pooling: true
+  }
+}
+```
+
+3. The input output channel restriction for depthwise convolution
+
+The Xilinx DPU Compiler actually has restrictions for depthwise conv's i/o channel number. If the number exceeds the maximum value, the compiler would trigger error:
+```
+[VAI_C-BACKEND][Check Failed: kernel_param * input_channel_group <= weights_buf_depth][/usr/local/anaconda3/conda-bld/vaic_1584632209107/work/dnnc/submodules/asicv2com/src/Operator/OperatorDptConv.cpp:31][DATA_OUTRANGE][Data value is out of range!] 
+```
+We don't know the actual value of `weights_buf_depth` because the C code is not open-sourced.
+So I found out the maximum value with binary search:
+- for 7x7 depth conv, the maixmum value is 656,
+- for 5x5 depth conv, the maximum value is 1296,
+- for 3x3 depth conv, the maximum value is 2000+, we don't have to worry about it.
