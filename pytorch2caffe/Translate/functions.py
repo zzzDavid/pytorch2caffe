@@ -773,17 +773,19 @@ def _add(raw, translog):
             # layer = caffe_net.Layer_param(name=layer_name, type='Bias', bottom=[log.blobs(input)], top=[log.blobs(x)])
             # layer.bias_param(args[0], trainable=False)
             # DPU does not support Bias layer
-            layer = caffe_net.Layer_param(
-                name=layer_name,
-                type="Scale",
-                bottom=[translog.blobs[id(input)]],
-                top=[translog.blobs[id(x)]],
-            )
-            layer.param.scale_param.bias_term = True
-            scale = torch.ones(x.size()[1], dtype=x.dtype)
-            bias = torch.ones(x.size()[1], dtype=x.dtype) * args[0]
-            layer.add_data(scale.numpy(), bias.numpy())
-            translog.cnet.add_layer(layer)
+            # import ipdb; ipdb.set_trace()
+            # layer = caffe_net.Layer_param(
+            #     name=layer_name,
+            #     type="Scale",
+            #     bottom=[translog.blobs[id(input)]],
+            #     top=[translog.blobs[id(x)]],
+            # )
+            # layer.param.scale_param.bias_term = True
+            # scale = torch.ones(x.size()[1], dtype=x.dtype)
+            # bias = torch.ones(x.size()[1], dtype=x.dtype) * args[0]
+            # layer.add_data(scale.numpy(), bias.numpy())
+            # translog.cnet.add_layer(layer)
+            return x
         else:
             # elementwise add
             layer = caffe_net.Layer_param(
