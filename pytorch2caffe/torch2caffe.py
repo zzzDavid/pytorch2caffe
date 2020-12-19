@@ -9,7 +9,7 @@ logger = logging.getLogger()
 
 
 
-class pytorch2caffe(object):
+class converter(object):
     def __init__(self, model):
         self.layer_names = dict()
         self.translog = TransLog()
