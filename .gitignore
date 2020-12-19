@@ -1,5 +1,6 @@
-test/*.caffemodel
-test/*.prototxt
+tests/*.caffemodel
+tests/*.prototxt
+tests/quantize_results/
 .vscode
 .pkl_memoize_py3
 .idea
