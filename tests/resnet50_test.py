@@ -1,5 +1,5 @@
 from resnet import resnet50, resnet18
-from pytorch2caffe.torch2caffe import converter
+from pytorch2caffe.converter import pytorch2caffe_converter
 import numpy as np
 from torch.autograd import Variable
 import torch
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     out_proto = 'resnet50.prototxt'
     out_caffemodel = 'resnet50.caffemodel'
 
-    torch2caffe = converter(model)
+    torch2caffe = pytorch2caffe_converter(model)
     torch2caffe.set_input(input, source, root, batch_size, new_height, new_width)
     torch2caffe.trans_net("resnet50")
     torch2caffe.save_caffemodel(out_caffemodel)

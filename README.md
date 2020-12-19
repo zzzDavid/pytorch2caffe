@@ -2,17 +2,22 @@
 
 This tool is for converting PyTorch CNN models to Caffe network configuration files (prototxt) and parameter files (caffemodel).
 
-## Installation
+## Install
 
+To install pytorch2caffe, go to its folder, then:
 ```
-pip install .
+$ pip install .
+```
+If you would like to install in develop mode:
+```
+$ pip install -e .
 ```
 
 ## API
 
 ```python
 
-from pytorch2caffe.torch2caffe import converter
+from pytorch2caffe.converter import pytorch2caffe_converter
 
 def your_function(model):
     # set up input layer information
@@ -24,7 +29,7 @@ def your_function(model):
     new_width = 416
 
     # initialize a pytorch2caffe converter object
-    torch2caffe = converter(model)
+    torch2caffe = pytorch2caffe_converter(model)
 
     # set input
     torch2caffe.set_input(input, source, root_folder, batch_size, new_height, new_width)
@@ -35,6 +40,9 @@ def your_function(model):
     # save results
     torch2caffe.save_prototxt('./resnet50.prototxt')
     torch2caffe.save_caffemodel('./resnet50.caffemodel')
+    # optional
+    torch2caffe.save_torch2caffe_names_json('./torch2caffe_names.json')
+
 ```
 
 ## Done
