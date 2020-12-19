@@ -724,14 +724,15 @@ def _view(raw, translog):
         top_blobs = translog.add_blobs([x], name="view_blob")
         layer = caffe_net.Layer_param(
             name=layer_name,
-            type="Reshape",
+            # type="Reshape",
+            type="Flatten",
             bottom=[translog.blobs[id(input)]],
             top=[translog.blobs[id(x)]],
         )
         # TODO: reshpae added to nn_tools layer
         dims = list(args)
         dims[0] = 0  # the first dim should be batch_size
-        layer.param.reshape_param.shape.CopyFrom(caffe_net.pb.BlobShape(dim=dims))
+        # layer.param.reshape_param.shape.CopyFrom(caffe_net.pb.BlobShape(dim=dims))
         translog.cnet.add_layer(layer)
         return x
 
